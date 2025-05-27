@@ -68,6 +68,40 @@ class TaskController extends AbstractController
         ], Response::HTTP_CREATED, [], ['groups' => ['task:read']]);
     }
 
+    #[Route('/stats', name: 'stats', methods: ['GET'])]
+    public function stats(): JsonResponse
+    {
+        $statistics = $this->taskService->getTaskStatistics();
+
+        return $this->json([
+            'success' => true,
+            'data' => $statistics
+        ], Response::HTTP_OK);
+    }
+
+    #[Route('/categories', name: 'categories', methods: ['GET'])]
+    public function categories(): JsonResponse
+    {
+        $categories = $this->taskService->getAvailableCategories();
+
+        return $this->json([
+            'success' => true,
+            'data' => $categories
+        ], Response::HTTP_OK);
+    }
+
+    #[Route('/overdue', name: 'overdue', methods: ['GET'])]
+    public function overdue(): JsonResponse
+    {
+        $overdueTasks = $this->taskService->getOverdueTasks();
+
+        return $this->json([
+            'success' => true,
+            'data' => $overdueTasks,
+            'count' => count($overdueTasks)
+        ], Response::HTTP_OK, [], ['groups' => ['task:read']]);
+    }
+
     #[Route('/{id}', name: 'show', methods: ['GET'])]
     public function show(Task $task): JsonResponse
     {
@@ -125,40 +159,6 @@ class TaskController extends AbstractController
             'success' => true,
             'message' => 'Status da tarefa atualizado',
             'data' => $updatedTask
-        ], Response::HTTP_OK, [], ['groups' => ['task:read']]);
-    }
-
-    #[Route('/stats', name: 'stats', methods: ['GET'])]
-    public function stats(): JsonResponse
-    {
-        $statistics = $this->taskService->getTaskStatistics();
-
-        return $this->json([
-            'success' => true,
-            'data' => $statistics
-        ], Response::HTTP_OK);
-    }
-
-    #[Route('/categories', name: 'categories', methods: ['GET'])]
-    public function categories(): JsonResponse
-    {
-        $categories = $this->taskService->getAvailableCategories();
-
-        return $this->json([
-            'success' => true,
-            'data' => $categories
-        ], Response::HTTP_OK);
-    }
-
-    #[Route('/overdue', name: 'overdue', methods: ['GET'])]
-    public function overdue(): JsonResponse
-    {
-        $overdueTasks = $this->taskService->getOverdueTasks();
-
-        return $this->json([
-            'success' => true,
-            'data' => $overdueTasks,
-            'count' => count($overdueTasks)
         ], Response::HTTP_OK, [], ['groups' => ['task:read']]);
     }
 }
