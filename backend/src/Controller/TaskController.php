@@ -8,7 +8,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/tasks', name: 'api_tasks_')]
 class TaskController extends AbstractController
@@ -20,9 +20,6 @@ class TaskController extends AbstractController
         $this->taskService = $taskService;
     }
 
-    /**
-     * Lista todas as tarefas com filtros opcionais
-     */
     #[Route('', name: 'index', methods: ['GET'])]
     public function index(Request $request): JsonResponse
     {
@@ -43,9 +40,6 @@ class TaskController extends AbstractController
         ], Response::HTTP_OK, [], ['groups' => ['task:read']]);
     }
 
-    /**
-     * Cria uma nova tarefa
-     */
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
@@ -74,9 +68,6 @@ class TaskController extends AbstractController
         ], Response::HTTP_CREATED, [], ['groups' => ['task:read']]);
     }
 
-    /**
-     * Exibe uma tarefa específica
-     */
     #[Route('/{id}', name: 'show', methods: ['GET'])]
     public function show(Task $task): JsonResponse
     {
@@ -86,9 +77,6 @@ class TaskController extends AbstractController
         ], Response::HTTP_OK, [], ['groups' => ['task:read']]);
     }
 
-    /**
-     * Atualiza uma tarefa
-     */
     #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
     public function update(Request $request, Task $task): JsonResponse
     {
@@ -117,9 +105,6 @@ class TaskController extends AbstractController
         ], Response::HTTP_OK, [], ['groups' => ['task:read']]);
     }
 
-    /**
-     * Remove uma tarefa
-     */
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(Task $task): JsonResponse
     {
@@ -131,9 +116,6 @@ class TaskController extends AbstractController
         ], Response::HTTP_OK);
     }
 
-    /**
-     * Alterna status de conclusão da tarefa
-     */
     #[Route('/{id}/toggle', name: 'toggle', methods: ['PATCH'])]
     public function toggle(Task $task): JsonResponse
     {
@@ -146,9 +128,6 @@ class TaskController extends AbstractController
         ], Response::HTTP_OK, [], ['groups' => ['task:read']]);
     }
 
-    /**
-     * Estatísticas das tarefas
-     */
     #[Route('/stats', name: 'stats', methods: ['GET'])]
     public function stats(): JsonResponse
     {
@@ -160,9 +139,6 @@ class TaskController extends AbstractController
         ], Response::HTTP_OK);
     }
 
-    /**
-     * Lista categorias disponíveis
-     */
     #[Route('/categories', name: 'categories', methods: ['GET'])]
     public function categories(): JsonResponse
     {
@@ -174,9 +150,6 @@ class TaskController extends AbstractController
         ], Response::HTTP_OK);
     }
 
-    /**
-     * Lista tarefas vencidas
-     */
     #[Route('/overdue', name: 'overdue', methods: ['GET'])]
     public function overdue(): JsonResponse
     {
