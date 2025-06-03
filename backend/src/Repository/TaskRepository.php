@@ -8,11 +8,6 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<Task>
- *
- * @method Task|null find($id, $lockMode = null, $lockVersion = null)
- * @method Task|null findOneBy(array $criteria, array $orderBy = null)
- * @method Task[]    findAll()
- * @method Task[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class TaskRepository extends ServiceEntityRepository
 {
@@ -83,14 +78,35 @@ class TaskRepository extends ServiceEntityRepository
     }
 
     /**
-     * Busca tarefas vencidas
+     * Busca tarefas vencidas (considera data E hora)
      */
     public function findOverdueTasks(): array
     {
+        $now = new \DateTime();
+        
         return $this->createQueryBuilder('t')
             ->where('t.dueDate < :now')
             ->andWhere('t.completed = false')
-            ->setParameter('now', new \DateTime())
+            ->setParameter('now', $now)
+            ->orderBy('t.dueDate', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Busca tarefas que vencem nas próximas X horas
+     */
+    public function findTasksDueSoon(int $hours = 24): array
+    {
+        $now = new \DateTime();
+        $futureDate = new \DateTime();
+        $futureDate->add(new \DateInterval('PT' . $hours . 'H'));
+        
+        return $this->createQueryBuilder('t')
+            ->where('t.dueDate BETWEEN :now AND :future')
+            ->andWhere('t.completed = false')
+            ->setParameter('now', $now)
+            ->setParameter('future', $futureDate)
             ->orderBy('t.dueDate', 'ASC')
             ->getQuery()
             ->getResult();

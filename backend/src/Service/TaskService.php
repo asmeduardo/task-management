@@ -174,7 +174,19 @@ class TaskService
         if (isset($data['dueDate'])) {
             $dueDate = null;
             if ($data['dueDate']) {
-                $dueDate = new \DateTime($data['dueDate']);
+                try {
+                    $dueDate = new \DateTime($data['dueDate']);
+                    
+                    if (!$this->validateDueDate($dueDate)) {
+
+                        $now = new \DateTime();
+                        if ($dueDate->format('Y-m-d') < $now->format('Y-m-d')) {
+                            throw new \InvalidArgumentException('Data de vencimento não pode ser no passado');
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $dueDate = null;
+                }
             }
             $task->setDueDate($dueDate);
         }

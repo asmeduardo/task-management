@@ -18,6 +18,26 @@ interface TaskFormProps {
   isSubmitting?: boolean;
 }
 
+const formatDateTimeLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const parseLocalDateTime = (localDateTime: string): string => {
+  const date = new Date(localDateTime);
+  return date.toISOString();
+};
+
+const getMinDateTime = (): string => {
+  const now = new Date();
+  return formatDateTimeLocal(now);
+};
+
 export default function TaskForm({
   task,
   categories,
@@ -37,13 +57,14 @@ export default function TaskForm({
 
   useEffect(() => {
     if (task) {
-      reset({
+      const formData: TaskFormData = {
         title: task.title,
         description: task.description || '',
         priority: task.priority,
         category: task.category || '',
-        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
-      });
+        dueDate: task.dueDate ? formatDateTimeLocal(new Date(task.dueDate)) : '',
+      };
+      reset(formData);
     }
   }, [task, reset]);
 
@@ -57,7 +78,7 @@ export default function TaskForm({
       priority: data.priority,
       description: data.description || undefined,
       category: data.category || undefined,
-      dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+      dueDate: data.dueDate ? parseLocalDateTime(data.dueDate) : undefined,
     };
 
     onSubmit(submitData);
@@ -186,14 +207,17 @@ export default function TaskForm({
 
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-3">
-                📅 Data de Vencimento
+                📅 Data e Hora de Vencimento
               </label>
               <input
                 {...register('dueDate')}
-                type="date"
-                min={new Date().toISOString().split('T')[0]}
+                type="datetime-local"
+                min={getMinDateTime()}
                 className="input-modern"
               />
+              <p className="text-xs text-gray-500 mt-2">
+                💡 Selecione data e hora no seu fuso horário local
+              </p>
             </div>
           </div>
         </div>

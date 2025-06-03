@@ -9,17 +9,32 @@ interface TaskCardProps {
 
 export default function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardProps) {
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZoneName: 'short'
     });
   };
 
   const isOverdue = task.dueDate && !task.completed && 
-  new Date(task.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
+    new Date(task.dueDate).getTime() < new Date().getTime();
+  
+  const isDueToday = task.dueDate && !task.completed && (() => {
+    const dueDate = new Date(task.dueDate);
+    const today = new Date();
+    return dueDate.toDateString() === today.toDateString() && dueDate.getTime() > today.getTime();
+  })();
+
+  const isDueSoon = task.dueDate && !task.completed && (() => {
+    const dueDate = new Date(task.dueDate);
+    const now = new Date();
+    const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    return dueDate.getTime() > now.getTime() && dueDate.getTime() <= twentyFourHoursFromNow.getTime();
+  })();
   
   const priorityConfig = {
     baixa: { gradient: 'from-green-400 to-emerald-400', icon: '🟢' },
@@ -33,6 +48,8 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardP
         ? 'border-l-green-500 opacity-75' 
         : isOverdue 
         ? 'border-l-red-500' 
+        : isDueSoon
+        ? 'border-l-yellow-500'
         : 'border-l-blue-500'
     }`}>
       <div className="flex items-start justify-between">
@@ -74,6 +91,18 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardP
                     🚨 Vencida
                   </span>
                 )}
+                
+                {isDueToday && (
+                  <span className="px-3 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white">
+                    📅 Vence hoje
+                  </span>
+                )}
+                
+                {isDueSoon && !isDueToday && (
+                  <span className="px-3 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                    ⏰ Vence em breve
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -91,13 +120,19 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardP
           <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
             <div className="flex items-center space-x-1">
               <span>📅</span>
-              <span>Criada em {formatDateTime(task.createdAt)}</span>
+              <span>Criada: {formatDateTime(task.createdAt)}</span>
             </div>
             {task.dueDate && (
-              <div className={`flex items-center space-x-1 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
-                <span>{isOverdue ? '⚠️' : '🎯'}</span>
+              <div className={`flex items-center space-x-1 ${
+                isOverdue 
+                  ? 'text-red-600 font-medium' 
+                  : isDueSoon 
+                  ? 'text-orange-600 font-medium'
+                  : ''
+              }`}>
+                <span>{isOverdue ? '⚠️' : isDueSoon ? '⏰' : '🎯'}</span>
                 <span>
-                  {isOverdue ? 'Venceu em' : 'Vence em'} {formatDateTime(task.dueDate)}
+                  {isOverdue ? 'Venceu' : 'Vence'}: {formatDateTime(task.dueDate)}
                 </span>
               </div>
             )}
