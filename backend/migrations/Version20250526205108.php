@@ -11,23 +11,23 @@ final class Version20250526205108 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Create tasks table with all required fields';
+        return 'Create tasks table with all required fields for PostgreSQL';
     }
 
     public function up(Schema $schema): void
     {
+        
         $this->addSql('CREATE TABLE tasks (
-            id INT AUTO_INCREMENT NOT NULL, 
+            id SERIAL PRIMARY KEY,
             title VARCHAR(255) NOT NULL, 
-            description LONGTEXT DEFAULT NULL, 
-            completed TINYINT(1) NOT NULL DEFAULT 0, 
-            priority VARCHAR(50) NOT NULL DEFAULT "media", 
+            description TEXT DEFAULT NULL,
+            completed BOOLEAN NOT NULL DEFAULT FALSE,
+            priority VARCHAR(50) NOT NULL DEFAULT \'media\',
             category VARCHAR(100) DEFAULT NULL, 
-            created_at DATETIME NOT NULL, 
-            updated_at DATETIME NOT NULL, 
-            due_date DATETIME DEFAULT NULL, 
-            PRIMARY KEY(id)
-        ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+            created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+            updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+            due_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL 
+        )');
 
         $this->addSql('CREATE INDEX IDX_tasks_completed ON tasks (completed)');
         $this->addSql('CREATE INDEX IDX_tasks_priority ON tasks (priority)');
@@ -37,6 +37,8 @@ final class Version20250526205108 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
+        $this->abortIf($this->connection->getDatabasePlatform()->getName() !== 'postgresql', 'Migration can only be executed safely on \'postgresql\'.');
+
         $this->addSql('DROP TABLE tasks');
     }
 }
