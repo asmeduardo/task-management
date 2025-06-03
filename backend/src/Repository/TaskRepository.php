@@ -62,14 +62,14 @@ class TaskRepository extends ServiceEntityRepository
      */
     public function getTaskStats(): array
     {
-        $qb = $this->createQueryBuilder('t');
-
-        $total = $qb->select('COUNT(t.id)')
+        $total = $this->createQueryBuilder('t_total')
+            ->select('COUNT(t_total.id)')
             ->getQuery()
             ->getSingleScalarResult();
 
-        $completed = $qb->select('COUNT(t.id)')
-            ->where('t.completed = true')
+        $completed = $this->createQueryBuilder('t_completed')
+            ->select('COUNT(t_completed.id)')
+            ->where('t_completed.completed = true')
             ->getQuery()
             ->getSingleScalarResult();
 
@@ -89,9 +89,8 @@ class TaskRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('t')
             ->where('t.dueDate < :startOfToday')
-            ->setParameter('startOfToday', (new \DateTime())->setTime(0, 0, 0))
             ->andWhere('t.completed = false')
-            ->setParameter('now', new \DateTime())
+            ->setParameter('startOfToday', (new \DateTime())->setTime(0, 0, 0))
             ->orderBy('t.dueDate', 'ASC')
             ->getQuery()
             ->getResult();
