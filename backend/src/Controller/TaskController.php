@@ -23,12 +23,15 @@ class TaskController extends AbstractController
     #[Route('', name: 'index', methods: ['GET'])]
     public function index(Request $request): JsonResponse
     {
+        $user = $this->getUser();
+        
         $filters = [
             'completed' => $request->query->get('completed') !== null ?
                 filter_var($request->query->get('completed'), FILTER_VALIDATE_BOOLEAN) : null,
             'priority' => $request->query->get('priority'),
             'category' => $request->query->get('category'),
-            'search' => $request->query->get('search')
+            'search' => $request->query->get('search'),
+            'user' => $user
         ];
 
         $tasks = $this->taskService->getFilteredTasks($filters);
@@ -43,6 +46,7 @@ class TaskController extends AbstractController
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
+        $user = $this->getUser();
         $data = json_decode($request->getContent(), true);
 
         if (!$data) {
@@ -52,7 +56,7 @@ class TaskController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        $result = $this->taskService->createTask($data);
+        $result = $this->taskService->createTask($data, $user);
 
         if (!$result['success']) {
             return $this->json([
@@ -71,7 +75,8 @@ class TaskController extends AbstractController
     #[Route('/stats', name: 'stats', methods: ['GET'])]
     public function stats(): JsonResponse
     {
-        $statistics = $this->taskService->getTaskStatistics();
+        $user = $this->getUser();
+        $statistics = $this->taskService->getTaskStatistics($user);
 
         return $this->json([
             'success' => true,
@@ -82,7 +87,8 @@ class TaskController extends AbstractController
     #[Route('/categories', name: 'categories', methods: ['GET'])]
     public function categories(): JsonResponse
     {
-        $categories = $this->taskService->getAvailableCategories();
+        $user = $this->getUser();
+        $categories = $this->taskService->getAvailableCategories($user);
 
         return $this->json([
             'success' => true,
@@ -93,7 +99,8 @@ class TaskController extends AbstractController
     #[Route('/overdue', name: 'overdue', methods: ['GET'])]
     public function overdue(): JsonResponse
     {
-        $overdueTasks = $this->taskService->getOverdueTasks();
+        $user = $this->getUser();
+        $overdueTasks = $this->taskService->getOverdueTasks($user);
 
         return $this->json([
             'success' => true,
@@ -105,6 +112,13 @@ class TaskController extends AbstractController
     #[Route('/{id}', name: 'show', methods: ['GET'])]
     public function show(Task $task): JsonResponse
     {
+        if ($task->getUser() !== $this->getUser()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Acesso negado'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         return $this->json([
             'success' => true,
             'data' => $task
@@ -114,6 +128,13 @@ class TaskController extends AbstractController
     #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
     public function update(Request $request, Task $task): JsonResponse
     {
+        if ($task->getUser() !== $this->getUser()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Acesso negado'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         if (!$data) {
@@ -142,6 +163,13 @@ class TaskController extends AbstractController
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(Task $task): JsonResponse
     {
+        if ($task->getUser() !== $this->getUser()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Acesso negado'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         $this->taskService->deleteTask($task);
 
         return $this->json([
@@ -153,6 +181,13 @@ class TaskController extends AbstractController
     #[Route('/{id}/toggle', name: 'toggle', methods: ['PATCH'])]
     public function toggle(Task $task): JsonResponse
     {
+        if ($task->getUser() !== $this->getUser()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Acesso negado'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         $updatedTask = $this->taskService->toggleTaskComplete($task);
 
         return $this->json([

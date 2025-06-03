@@ -11,34 +11,44 @@ final class Version20250526205108 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Create tasks table with all required fields for PostgreSQL';
+        return 'Create users table and add user_id to tasks table';
     }
 
     public function up(Schema $schema): void
     {
-        
-        $this->addSql('CREATE TABLE tasks (
+        // Criar tabela de usuários
+        $this->addSql('CREATE TABLE users (
             id SERIAL PRIMARY KEY,
-            title VARCHAR(255) NOT NULL, 
-            description TEXT DEFAULT NULL,
-            completed BOOLEAN NOT NULL DEFAULT FALSE,
-            priority VARCHAR(50) NOT NULL DEFAULT \'media\',
-            category VARCHAR(100) DEFAULT NULL, 
+            email VARCHAR(180) UNIQUE NOT NULL,
+            roles JSON NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            name VARCHAR(100) NOT NULL,
             created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-            updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
-            due_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL 
+            updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
         )');
 
-        $this->addSql('CREATE INDEX IDX_tasks_completed ON tasks (completed)');
-        $this->addSql('CREATE INDEX IDX_tasks_priority ON tasks (priority)');
-        $this->addSql('CREATE INDEX IDX_tasks_category ON tasks (category)');
-        $this->addSql('CREATE INDEX IDX_tasks_due_date ON tasks (due_date)');
+        // Adicionar índice no email
+        $this->addSql('CREATE UNIQUE INDEX UNIQ_users_email ON users (email)');
+
+        // Adicionar coluna user_id na tabela tasks
+        $this->addSql('ALTER TABLE tasks ADD user_id INTEGER NOT NULL DEFAULT 1');
+
+        // Criar foreign key constraint
+        $this->addSql('ALTER TABLE tasks ADD CONSTRAINT FK_tasks_user_id FOREIGN KEY (user_id) REFERENCES users (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
+
+        // Criar índice na foreign key
+        $this->addSql('CREATE INDEX IDX_tasks_user_id ON tasks (user_id)');
+
+        // Inserir usuário padrão para tarefas existentes (opcional)
+        $this->addSql("INSERT INTO users (email, roles, password, name, created_at, updated_at) VALUES 
+            ('admin@example.com', '[\"ROLE_USER\"]', '\$2y\$13\$dummy.hash.for.migration', 'Admin', NOW(), NOW())");
     }
 
     public function down(Schema $schema): void
     {
-        $this->abortIf($this->connection->getDatabasePlatform()->getName() !== 'postgresql', 'Migration can only be executed safely on \'postgresql\'.');
-
-        $this->addSql('DROP TABLE tasks');
+        $this->addSql('ALTER TABLE tasks DROP CONSTRAINT FK_tasks_user_id');
+        $this->addSql('DROP INDEX IDX_tasks_user_id');
+        $this->addSql('ALTER TABLE tasks DROP user_id');
+        $this->addSql('DROP TABLE users');
     }
 }

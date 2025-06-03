@@ -66,6 +66,11 @@ class Task
     #[Groups(['task:read', 'task:write'])]
     private ?\DateTimeInterface $dueDate = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'tasks')]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['task:read'])]
+    private ?User $user = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -156,6 +161,17 @@ class Task
     public function setDueDate(?\DateTimeInterface $dueDate): static
     {
         $this->dueDate = $dueDate;
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
         return $this;
     }
 
