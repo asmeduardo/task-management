@@ -88,7 +88,8 @@ class TaskRepository extends ServiceEntityRepository
     public function findOverdueTasks(): array
     {
         return $this->createQueryBuilder('t')
-            ->where('t.dueDate < :now')
+            ->where('t.dueDate < :startOfToday')
+            ->setParameter('startOfToday', (new \DateTime())->setTime(0, 0, 0))
             ->andWhere('t.completed = false')
             ->setParameter('now', new \DateTime())
             ->orderBy('t.dueDate', 'ASC')

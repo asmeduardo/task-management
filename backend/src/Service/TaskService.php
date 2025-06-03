@@ -142,8 +142,9 @@ class TaskService
             return true;
         }
 
-        $now = new \DateTime();
-        return $dueDate >= $now;
+        $now = (new \DateTime())->setTime(0, 0, 0);
+        $dueDateOnly = (clone $dueDate)->setTime(0, 0, 0);
+        return $dueDateOnly >= $now;
     }
 
     /**

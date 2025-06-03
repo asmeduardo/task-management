@@ -16,7 +16,9 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardP
     });
   };
 
-  const isOverdue = task.dueDate && !task.completed && new Date(task.dueDate) < new Date();
+  const isOverdue = task.dueDate && !task.completed && 
+  new Date(task.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
+  
   const priorityConfig = {
     baixa: { gradient: 'from-green-400 to-emerald-400', icon: '🟢' },
     media: { gradient: 'from-yellow-400 to-orange-400', icon: '🟡' },
