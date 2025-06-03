@@ -42,7 +42,7 @@ export default function TaskForm({
         description: task.description || '',
         priority: task.priority,
         category: task.category || '',
-        dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
       });
     }
   }, [task, reset]);
@@ -57,7 +57,7 @@ export default function TaskForm({
       priority: data.priority,
       description: data.description || undefined,
       category: data.category || undefined,
-      dueDate: data.dueDate || undefined,
+      dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
     };
 
     onSubmit(submitData);

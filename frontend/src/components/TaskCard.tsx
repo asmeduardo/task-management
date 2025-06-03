@@ -8,11 +8,13 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardProps) {
-  const formatDate = (dateString: string) => {
+  const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
-      year: 'numeric'
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -89,13 +91,13 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete }: TaskCardP
           <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
             <div className="flex items-center space-x-1">
               <span>📅</span>
-              <span>Criada em {formatDate(task.createdAt)}</span>
+              <span>Criada em {formatDateTime(task.createdAt)}</span>
             </div>
             {task.dueDate && (
               <div className={`flex items-center space-x-1 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
                 <span>{isOverdue ? '⚠️' : '🎯'}</span>
                 <span>
-                  {isOverdue ? 'Venceu em' : 'Vence em'} {formatDate(task.dueDate)}
+                  {isOverdue ? 'Venceu em' : 'Vence em'} {formatDateTime(task.dueDate)}
                 </span>
               </div>
             )}
