@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Entity\Task;
+use App\Entity\User;
 use App\Repository\TaskRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -26,9 +27,10 @@ class TaskService
     /**
      * Cria uma nova tarefa com validação
      */
-    public function createTask(array $data): array
+    public function createTask(array $data, User $user): array
     {
         $task = new Task();
+        $task->setUser($user);
         $this->populateTaskFromArray($task, $data);
 
         $errors = $this->validator->validate($task);
@@ -98,21 +100,24 @@ class TaskService
      */
     public function getFilteredTasks(array $filters): array
     {
+        $user = $filters['user'] ?? null;
+        
         return $this->taskRepository->findByFilters(
             $filters['completed'] ?? null,
             $filters['priority'] ?? null,
             $filters['category'] ?? null,
-            $filters['search'] ?? null
+            $filters['search'] ?? null,
+            $user
         );
     }
 
     /**
      * Obtém estatísticas das tarefas
      */
-    public function getTaskStatistics(): array
+    public function getTaskStatistics(User $user): array
     {
-        $stats = $this->taskRepository->getTaskStats();
-        $overdue = count($this->taskRepository->findOverdueTasks());
+        $stats = $this->taskRepository->getTaskStats($user);
+        $overdue = count($this->taskRepository->findOverdueTasks($user));
 
         return array_merge($stats, ['overdue' => $overdue]);
     }
@@ -120,17 +125,17 @@ class TaskService
     /**
      * Busca tarefas vencidas
      */
-    public function getOverdueTasks(): array
+    public function getOverdueTasks(User $user): array
     {
-        return $this->taskRepository->findOverdueTasks();
+        return $this->taskRepository->findOverdueTasks($user);
     }
 
     /**
      * Obtém categorias disponíveis
      */
-    public function getAvailableCategories(): array
+    public function getAvailableCategories(User $user): array
     {
-        return $this->taskRepository->getAvailableCategories();
+        return $this->taskRepository->getAvailableCategories($user);
     }
 
     /**
@@ -178,7 +183,6 @@ class TaskService
                     $dueDate = new \DateTime($data['dueDate']);
                     
                     if (!$this->validateDueDate($dueDate)) {
-
                         $now = new \DateTime();
                         if ($dueDate->format('Y-m-d') < $now->format('Y-m-d')) {
                             throw new \InvalidArgumentException('Data de vencimento não pode ser no passado');

@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Task;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -23,9 +24,16 @@ class TaskRepository extends ServiceEntityRepository
         ?bool $completed = null,
         ?string $priority = null,
         ?string $category = null,
-        ?string $search = null
+        ?string $search = null,
+        ?User $user = null
     ): array {
         $qb = $this->createQueryBuilder('t');
+
+        // Filtrar por usuário sempre
+        if ($user) {
+            $qb->andWhere('t.user = :user')
+                ->setParameter('user', $user);
+        }
 
         if ($completed !== null) {
             $qb->andWhere('t.completed = :completed')
@@ -53,18 +61,22 @@ class TaskRepository extends ServiceEntityRepository
     }
 
     /**
-     * Conta tarefas por status
+     * Conta tarefas por status para um usuário específico
      */
-    public function getTaskStats(): array
+    public function getTaskStats(User $user): array
     {
         $total = $this->createQueryBuilder('t_total')
             ->select('COUNT(t_total.id)')
+            ->where('t_total.user = :user')
+            ->setParameter('user', $user)
             ->getQuery()
             ->getSingleScalarResult();
 
         $completed = $this->createQueryBuilder('t_completed')
             ->select('COUNT(t_completed.id)')
             ->where('t_completed.completed = true')
+            ->andWhere('t_completed.user = :user')
+            ->setParameter('user', $user)
             ->getQuery()
             ->getSingleScalarResult();
 
@@ -78,61 +90,33 @@ class TaskRepository extends ServiceEntityRepository
     }
 
     /**
-     * Busca tarefas vencidas (considera data E hora)
+     * Busca tarefas vencidas para um usuário
      */
-    public function findOverdueTasks(): array
+    public function findOverdueTasks(User $user): array
     {
         $now = new \DateTime();
         
         return $this->createQueryBuilder('t')
             ->where('t.dueDate < :now')
             ->andWhere('t.completed = false')
+            ->andWhere('t.user = :user')
             ->setParameter('now', $now)
+            ->setParameter('user', $user)
             ->orderBy('t.dueDate', 'ASC')
             ->getQuery()
             ->getResult();
     }
 
     /**
-     * Busca tarefas que vencem nas próximas X horas
+     * Busca categorias disponíveis para um usuário
      */
-    public function findTasksDueSoon(int $hours = 24): array
-    {
-        $now = new \DateTime();
-        $futureDate = new \DateTime();
-        $futureDate->add(new \DateInterval('PT' . $hours . 'H'));
-        
-        return $this->createQueryBuilder('t')
-            ->where('t.dueDate BETWEEN :now AND :future')
-            ->andWhere('t.completed = false')
-            ->setParameter('now', $now)
-            ->setParameter('future', $futureDate)
-            ->orderBy('t.dueDate', 'ASC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * Busca tarefas por prioridade
-     */
-    public function findByPriority(string $priority): array
-    {
-        return $this->createQueryBuilder('t')
-            ->where('t.priority = :priority')
-            ->setParameter('priority', $priority)
-            ->orderBy('t.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * Busca categorias disponíveis
-     */
-    public function getAvailableCategories(): array
+    public function getAvailableCategories(User $user): array
     {
         $result = $this->createQueryBuilder('t')
             ->select('DISTINCT t.category')
             ->where('t.category IS NOT NULL')
+            ->andWhere('t.user = :user')
+            ->setParameter('user', $user)
             ->orderBy('t.category', 'ASC')
             ->getQuery()
             ->getScalarResult();

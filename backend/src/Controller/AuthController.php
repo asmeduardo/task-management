@@ -2,40 +2,26 @@
 
 namespace App\Controller;
 
-use App\Entity\User;
-use App\Repository\UserRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\UserService;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Core\Exception\BadCredentialsException;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/auth', name: 'api_auth_')]
 class AuthController extends AbstractController
 {
-    private EntityManagerInterface $entityManager;
-    private UserPasswordHasherInterface $passwordHasher;
-    private ValidatorInterface $validator;
+    private UserService $userService;
     private JWTTokenManagerInterface $jwtManager;
-    private UserRepository $userRepository;
 
     public function __construct(
-        EntityManagerInterface $entityManager,
-        UserPasswordHasherInterface $passwordHasher,
-        ValidatorInterface $validator,
-        JWTTokenManagerInterface $jwtManager,
-        UserRepository $userRepository
+        UserService $userService,
+        JWTTokenManagerInterface $jwtManager
     ) {
-        $this->entityManager = $entityManager;
-        $this->passwordHasher = $passwordHasher;
-        $this->validator = $validator;
+        $this->userService = $userService;
         $this->jwtManager = $jwtManager;
-        $this->userRepository = $userRepository;
     }
 
     #[Route('/register', name: 'register', methods: ['POST'])]
@@ -58,53 +44,39 @@ class AuthController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        // Verificar se usuário já existe
-        $existingUser = $this->userRepository->findByEmail($data['email']);
-        if ($existingUser) {
+        // Validar força da senha (opcional)
+        $passwordValidation = $this->userService->validatePasswordStrength($data['password']);
+        if (!$passwordValidation['valid']) {
             return $this->json([
                 'success' => false,
-                'message' => 'Este email já está sendo usado'
-            ], Response::HTTP_CONFLICT);
-        }
-
-        // Criar novo usuário
-        $user = new User();
-        $user->setEmail($data['email']);
-        $user->setName($data['name']);
-        
-        // Hash da senha
-        $hashedPassword = $this->passwordHasher->hashPassword($user, $data['password']);
-        $user->setPassword($hashedPassword);
-
-        // Validar
-        $errors = $this->validator->validate($user);
-        if (count($errors) > 0) {
-            $formattedErrors = [];
-            foreach ($errors as $error) {
-                $formattedErrors[] = [
-                    'field' => $error->getPropertyPath(),
-                    'message' => $error->getMessage()
-                ];
-            }
-
-            return $this->json([
-                'success' => false,
-                'errors' => $formattedErrors
+                'message' => 'Senha não atende aos critérios de segurança',
+                'password_errors' => $passwordValidation['errors']
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        // Salvar usuário
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
+        $result = $this->userService->createUser($data);
+
+        if (!$result['success']) {
+            $statusCode = isset($result['message']) && 
+                         str_contains($result['message'], 'já está sendo usado') ? 
+                         Response::HTTP_CONFLICT : 
+                         Response::HTTP_UNPROCESSABLE_ENTITY;
+
+            return $this->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Erro na validação',
+                'errors' => $result['errors'] ?? []
+            ], $statusCode);
+        }
 
         // Gerar token
-        $token = $this->jwtManager->create($user);
+        $token = $this->jwtManager->create($result['user']);
 
         return $this->json([
             'success' => true,
             'message' => 'Usuário criado com sucesso',
             'data' => [
-                'user' => $user,
+                'user' => $result['user'],
                 'token' => $token
             ]
         ], Response::HTTP_CREATED, [], ['groups' => ['user:read']]);
@@ -122,31 +94,23 @@ class AuthController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        // Buscar usuário
-        $user = $this->userRepository->findByEmail($data['email']);
-        if (!$user) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Credenciais inválidas'
-            ], Response::HTTP_UNAUTHORIZED);
-        }
+        $result = $this->userService->validateLogin($data['email'], $data['password']);
 
-        // Verificar senha
-        if (!$this->passwordHasher->isPasswordValid($user, $data['password'])) {
+        if (!$result['success']) {
             return $this->json([
                 'success' => false,
-                'message' => 'Credenciais inválidas'
+                'message' => $result['message']
             ], Response::HTTP_UNAUTHORIZED);
         }
 
         // Gerar token
-        $token = $this->jwtManager->create($user);
+        $token = $this->jwtManager->create($result['user']);
 
         return $this->json([
             'success' => true,
             'message' => 'Login realizado com sucesso',
             'data' => [
-                'user' => $user,
+                'user' => $result['user'],
                 'token' => $token
             ]
         ], Response::HTTP_OK, [], ['groups' => ['user:read']]);
@@ -164,9 +128,14 @@ class AuthController extends AbstractController
             ], Response::HTTP_UNAUTHORIZED);
         }
 
+        $userStats = $this->userService->getUserStatistics($user);
+
         return $this->json([
             'success' => true,
-            'data' => $user
+            'data' => [
+                'user' => $user,
+                'statistics' => $userStats
+            ]
         ], Response::HTTP_OK, [], ['groups' => ['user:read']]);
     }
 
@@ -191,5 +160,60 @@ class AuthController extends AbstractController
                 'token' => $token
             ]
         ], Response::HTTP_OK);
+    }
+
+    #[Route('/profile', name: 'update_profile', methods: ['PUT', 'PATCH'])]
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Usuário não autenticado'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!$data) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Dados inválidos'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Se está atualizando a senha, validar força
+        if (isset($data['password']) && !empty($data['password'])) {
+            $passwordValidation = $this->userService->validatePasswordStrength($data['password']);
+            if (!$passwordValidation['valid']) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Senha não atende aos critérios de segurança',
+                    'password_errors' => $passwordValidation['errors']
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
+        $result = $this->userService->updateUser($user, $data);
+
+        if (!$result['success']) {
+            $statusCode = isset($result['message']) && 
+                         str_contains($result['message'], 'já está sendo usado') ? 
+                         Response::HTTP_CONFLICT : 
+                         Response::HTTP_UNPROCESSABLE_ENTITY;
+
+            return $this->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Erro na validação',
+                'errors' => $result['errors'] ?? []
+            ], $statusCode);
+        }
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Perfil atualizado com sucesso',
+            'data' => $result['user']
+        ], Response::HTTP_OK, [], ['groups' => ['user:read']]);
     }
 }

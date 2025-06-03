@@ -1,13 +1,18 @@
 import { type ReactNode } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { User } from '../types/Auth';
 
 interface LayoutProps {
   children: ReactNode;
   activeTab?: 'tasks' | 'dashboard';
   onTabChange?: (tab: 'tasks' | 'dashboard') => void;
   onCreateTask?: () => void;
+  user?: User | null;
 }
 
-export default function Layout({ children, activeTab, onTabChange, onCreateTask }: LayoutProps) {
+export default function Layout({ children, activeTab, onTabChange, onCreateTask, user }: LayoutProps) {
+  const { logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
@@ -22,7 +27,7 @@ export default function Layout({ children, activeTab, onTabChange, onCreateTask 
                   Task Manager
                 </h1>
                 <p className="text-sm text-gray-500 hidden sm:block">
-                  Organize suas tarefas de forma inteligente
+                  Olá, {user?.name || 'Usuário'}! 👋
                 </p>
               </div>
             </div>
@@ -53,18 +58,30 @@ export default function Layout({ children, activeTab, onTabChange, onCreateTask 
                 </nav>
               )}
               
-              {onCreateTask && (
+              <div className="flex items-center space-x-4">
+                {onCreateTask && (
+                  <button
+                    onClick={onCreateTask}
+                    className="btn-primary group relative overflow-hidden"
+                  >
+                    <span className="relative z-10 flex items-center space-x-2">
+                      <span className="text-lg">+</span>
+                      <span>Nova Tarefa</span>
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  </button>
+                )}
+
                 <button
-                  onClick={onCreateTask}
-                  className="btn-primary group relative overflow-hidden"
+                  onClick={logout}
+                  className="btn-secondary group relative overflow-hidden"
                 >
                   <span className="relative z-10 flex items-center space-x-2">
-                    <span className="text-lg">+</span>
-                    <span>Nova Tarefa</span>
+                    <span>🚪</span>
+                    <span>Sair</span>
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                 </button>
-              )}
+              </div>
             </div>
           </div>
         </div>

@@ -13,9 +13,11 @@ async function apiRequest<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  const token = localStorage.getItem('token');
   const config: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
     ...options,
@@ -23,6 +25,12 @@ async function apiRequest<T>(
 
   try {
     const response = await fetch(url, config);
+    
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+      throw new ApiError(401, 'Token expirado');
+    }
     
     if (!response.ok) {
       throw new ApiError(response.status, `HTTP error! status: ${response.status}`);

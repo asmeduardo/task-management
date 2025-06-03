@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import AuthPage from './pages/AuthPage';
 import Layout from './components/Layout';
 import TaskList from './components/TaskList';
 import Dashboard from './components/Dashboard';
 import TaskForm from './components/TaskForm';
 import Modal from './components/ui/Modal';
 import Toast from './components/ui/Toast';
+import Loading from './components/ui/Loading';
 import { Task, CreateTaskData } from './types/Task';
 import { taskService } from './services/taskService';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useToast } from './hooks/useToast';
 
-function App() {
+function AppContent() {
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const [activeTab, setActiveTab] = useLocalStorage<'tasks' | 'dashboard'>('activeTab', 'dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
@@ -31,8 +35,10 @@ function App() {
   };
 
   useEffect(() => {
-    loadCategories();
-  }, []);
+    if (isAuthenticated) {
+      loadCategories();
+    }
+  }, [isAuthenticated]);
 
   const handleCreateTask = () => {
     setEditingTask(undefined);
@@ -79,12 +85,21 @@ function App() {
     }
   };
 
+  if (authLoading) {
+    return <Loading />;
+  }
+
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
   return (
     <>
       <Layout 
         activeTab={activeTab} 
         onTabChange={setActiveTab}
         onCreateTask={handleCreateTask}
+        user={user}
       >
         {activeTab === 'dashboard' && (
           <Dashboard 
@@ -120,6 +135,14 @@ function App() {
         />
       ))}
     </>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

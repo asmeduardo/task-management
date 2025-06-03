@@ -13,6 +13,7 @@ RUN apk add --no-cache \
     autoconf \
     g++ \
     make \
+    openssl \
     && docker-php-ext-install \
         pdo \
         pdo_pgsql \
@@ -39,9 +40,10 @@ RUN composer install --no-scripts --no-autoloader --no-dev --prefer-dist
 
 COPY . .
 
-RUN mkdir -p var/cache var/log \
-    && chown -R www-data:www-data var/cache var/log \
-    && chmod -R 777 var/cache var/log # Permissões de gravação para cache/log (dev)
+RUN mkdir -p var/cache var/log config/jwt \
+    && chown -R www-data:www-data var/cache var/log config/jwt \
+    && chmod -R 777 var/cache var/log \
+    && chmod -R 755 config/jwt
 
 RUN composer dump-autoload --optimize --no-dev
 
